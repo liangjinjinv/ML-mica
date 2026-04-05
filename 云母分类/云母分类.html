@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>云母化学组成矿床类型判别系统</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      --primary:#2563eb;
+      --bg:#f8fafc;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    header{
+      background:linear-gradient(135deg,#1e3a8a,#2563eb);
+      color:#fff;
+      padding:28px 20px;
+    }
+    header h1{margin:0;font-size:26px;}
+    header p{margin:6px 0 0;opacity:.9;}
+
+    main{max-width:1200px;margin:30px auto;padding:0 20px;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      padding:22px;
+      box-shadow:0 8px 24px rgba(15,23,42,.06);
+    }
+    .card h2{
+      margin-top:0;
+      font-size:18px;
+      border-left:4px solid var(--primary);
+      padding-left:10px;
+      margin-bottom: 20px;
+    }
+
+    .tabs,.subtabs{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+    .tab{
+      padding:8px 14px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+      font-size:14px;
+    }
+    .tab.active{
+      background:var(--primary);
+      color:#fff;
+      border-color:var(--primary);
+    }
+
+    .table-container {
+      overflow-x: auto; /* 元素较多，支持横向滚动 */
+      margin-bottom: 10px;
+    }
+    table{width:100%;border-collapse:collapse;font-size:12px; min-width: 600px;}
+    th,td{
+      border:1px solid var(--border);
+      padding:8px 4px;
+      text-align:center;
+    }
+    th{background:#f1f5f9;font-weight:600; color: #475569;}
+    input{
+      width:100%;
+      min-width: 60px;
+      padding:5px;
+      border-radius:4px;
+      border:1px solid #d1d5db;
+      text-align: center;
+    }
+
+    .actions{margin-top:16px;}
+    button{
+      padding:10px 24px;
+      border-radius:10px;
+      border:none;
+      background:var(--primary);
+      color:#fff;
+      font-size:15px;
+      cursor:pointer;
+      font-weight: 500;
+    }
+    button:disabled {
+      background:var(--muted);
+      cursor:not-allowed;
+    }
+
+    .upload{
+      border:2px dashed var(--border);
+      border-radius:12px;
+      padding:20px;
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .result{
+      margin-top:16px;
+      padding:16px;
+      border-radius:12px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      display:none;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(37, 99, 235, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .note{font-size:13px;color:var(--muted);margin-top:12px; line-height: 1.5;}
+    footer{text-align:center;padding:30px 10px;font-size:13px;color:var(--muted);}
+    @media(max-width:1100px){.grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>云母化学组成矿床类型判别系统</h1>
+  <p>Web Demonstration (Sn - W - Porphyry Cu)</p>
+</header>
+
+<main>
+<div class="grid">
+
+<div class="card">
+  <h2>① 数据输入</h2>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchMode('single',this)">单条输入</div>
+    <div class="tab" onclick="switchMode('excel',this)">Excel 批量导入</div>
+  </div>
+
+  <div id="singleMode">
+    <div class="subtabs">
+      <div class="tab active" onclick="switchElement('major',this)">主量元素 (wt%)</div>
+      <div class="tab" onclick="switchElement('trace',this)">微量元素 (ppm)</div>
+    </div>
+
+    <div id="majorTable" class="table-container">
+      <table>
+        <tr>
+          <th>SiO₂</th><th>TiO₂</th><th>Al₂O₃</th><th>FeO</th><th>MnO</th><th>MgO</th>
+          <th>CaO</th><th>Na₂O</th><th>K₂O</th><th>F</th><th>Cl</th><th>Mg#</th><th>A/CNK</th>
+        </tr>
+        <tr>
+          <td><input id="SiO2" placeholder="0.0"></td>
+          <td><input id="TiO2" placeholder="0.0"></td>
+          <td><input id="Al2O3" placeholder="0.0"></td>
+          <td><input id="FeO" placeholder="0.0"></td>
+          <td><input id="MnO" placeholder="0.0"></td>
+          <td><input id="MgO" placeholder="0.0"></td>
+          <td><input id="CaO" placeholder="0.0"></td>
+          <td><input id="Na2O" placeholder="0.0"></td>
+          <td><input id="K2O" placeholder="0.0"></td>
+          <td><input id="F" placeholder="0.0"></td>
+          <td><input id="Cl" placeholder="0.0"></td>
+          <td><input id="Mg#" placeholder="0.0"></td>
+          <td><input id="A/CNK" placeholder="0.0"></td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="traceTable" class="table-container" style="display:none">
+      <table>
+        <tr>
+          <th>Li</th><th>Sc</th><th>V</th><th>Cr</th><th>Co</th><th>Ni</th><th>Rb</th><th>Sr</th><th>Nb</th>
+        </tr>
+        <tr>
+          <td><input id="Li" placeholder="0.0"></td>
+          <td><input id="Sc" placeholder="0.0"></td>
+          <td><input id="V" placeholder="0.0"></td>
+          <td><input id="Cr" placeholder="0.0"></td>
+          <td><input id="Co" placeholder="0.0"></td>
+          <td><input id="Ni" placeholder="0.0"></td>
+          <td><input id="Rb" placeholder="0.0"></td>
+          <td><input id="Sr" placeholder="0.0"></td>
+          <td><input id="Nb" placeholder="0.0"></td>
+        </tr>
+        <tr>
+          <th>Sn</th><th>Cs</th><th>Ba</th><th>Ta</th><th>W</th><th>Nb/Ta</th><th>V/Sc</th><th>Rb/Sr</th><th>Rb/Ba</th><th>Nb/Sn</th>
+        </tr>
+        <tr>
+          <td><input id="Sn" placeholder="0.0"></td>
+          <td><input id="Cs" placeholder="0.0"></td>
+          <td><input id="Ba" placeholder="0.0"></td>
+          <td><input id="Ta" placeholder="0.0"></td>
+          <td><input id="W" placeholder="0.0"></td>
+          <td><input id="Nb/Ta" placeholder="0.0"></td>
+          <td><input id="V/Sc" placeholder="0.0"></td>
+          <td><input id="Rb/Sr" placeholder="0.0"></td>
+          <td><input id="Rb/Ba" placeholder="0.0"></td>
+          <td><input id="Nb/Sn" placeholder="0.0"></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div id="excelMode" style="display:none">
+    <div class="upload">
+      <p><b>上传 Excel / CSV 文件</b></p>
+      <input type="file" id="excelFile" accept=".xlsx,.csv">
+      <p style="font-size:12px; margin-top:10px;">请确保表头包含对应的元素名称</p>
+      <p style="font-size:12px; color:#dc2626;">注意：批量处理功能需要后端API支持</p>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="predictBtn" onclick="generateResult()">开始判别</button>
+    <button id="clearBtn" onclick="clearInputs()" style="background:#64748b; margin-left:10px;">清空输入</button>
+  </div>
+
+  <p class="note">
+    <b>说明：</b><br>
+    1. 支持 Sn、W 及 斑岩型 Cu 矿床判别。<br>
+    2. 主量元素模型：13个特征，微量元素模型：19个特征。<br>
+    3. 确保后端API正在运行（端口8080）。
+  </p>
+</div>
+
+<div class="card">
+  <h2>② 判别结果</h2>
+  <div id="output" class="result"></div>
+</div>
+
+</div>
+</main>
+
+<footer>© 云母成矿判别系统 · 2026</footer>
+
+<script>
+let currentMode = 'single';
+let currentElement = 'major';
+const API_BASE_URL = 'http://localhost:8080';
+
+function switchMode(mode, el){
+  currentMode = mode;
+  document.getElementById('singleMode').style.display = mode==='single'?'block':'none';
+  document.getElementById('excelMode').style.display  = mode==='excel'?'block':'none';
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function switchElement(type, el){
+  currentElement = type;
+  document.getElementById('majorTable').style.display = type==='major'?'block':'none';
+  document.getElementById('traceTable').style.display = type==='trace'?'block':'none';
+  document.querySelectorAll('#singleMode .subtabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function clearInputs() {
+  // 清空所有输入框
+  document.querySelectorAll('input').forEach(input => {
+    if (input.type !== 'file') {
+      input.value = '';
+    }
+  });
+  // 隐藏结果
+  document.getElementById('output').style.display = 'none';
+}
+
+async function checkAPIHealth() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('API健康状态:', data);
+      return data.models_loaded;
+    }
+    return null;
+  } catch (error) {
+    console.error('API健康检查失败:', error);
+    return null;
+  }
+}
+
+// 数据验证函数
+function validateInputValue(feature, value) {
+  // 检查是否为有效数字
+  if (isNaN(value) || value === null || value === undefined) {
+    return { valid: false, message: `特征 "${feature}" 需要输入有效的数值` };
+  }
+  
+  // 检查数值范围（根据地质数据常见范围）
+  const ranges = {
+    // 主量元素范围 (wt%)
+    'SiO2': { min: 0, max: 100 },
+    'TiO2': { min: 0, max: 10 },
+    'Al2O3': { min: 0, max: 100 },
+    'FeO': { min: 0, max: 100 },
+    'MnO': { min: 0, max: 10 },
+    'MgO': { min: 0, max: 100 },
+    'CaO': { min: 0, max: 100 },
+    'Na2O': { min: 0, max: 20 },
+    'K2O': { min: 0, max: 20 },
+    'F': { min: 0, max: 10 },
+    'Cl': { min: 0, max: 5 },
+    'Mg#': { min: 0, max: 100},
+    'A/CNK': { min: 0, max: 10},
+    
+    // 微量元素范围 (ppm)
+    'Li': { min: 0, max: 10000 },
+    'Sc': { min: 0, max: 1000 },
+    'V': { min: 0, max: 10000 },
+    'Cr': { min: 0, max: 10000 },
+    'Co': { min: 0, max: 1000 },
+    'Ni': { min: 0, max: 10000 },
+    'Rb': { min: 0, max: 10000 },
+    'Sr': { min: 0, max: 10000 },
+    'Nb': { min: 0, max: 10000 },
+    'Sn': { min: 0, max: 10000 },
+    'Cs': { min: 0, max: 1000 },
+    'Ba': { min: 0, max: 10000 },
+    'Ta': { min: 0, max: 1000 },
+    'W': { min: 0, max: 10000 },
+    'Nb/Ta': { min: 0, max: 10000 },
+    'V/Sc': { min: 0, max: 10000 },
+    'Rb/Sr': { min: 0, max: 10000 },
+    'Rb/Ba': { min: 0, max: 10000 },
+    'Nb/Sn': { min: 0, max: 10000 }
+  };
+  
+  if (ranges[feature]) {
+    const { min, max } = ranges[feature];
+    if (value < min || value > max) {
+      return { 
+        valid: false, 
+        message: `特征 "${feature}" 的值 ${value} 超出合理范围 (${min} - ${max})` 
+      };
+    }
+  }
+  
+  return { valid: true, message: '' };
+}
+
+// 显示错误消息
+function showError(message) {
+  const out = document.getElementById('output');
+  out.innerHTML = '<b style="color:#dc2626;">错误：</b>' + message;
+  out.style.display = 'block';
+}
+
+async function generateResult(){
+  const out = document.getElementById('output');
+  const predictBtn = document.getElementById('predictBtn');
+  
+  // 隐藏之前的结果
+  out.style.display = 'none';
+  
+  // 检查API健康状态
+  const apiStatus = await checkAPIHealth();
+  if (!apiStatus) {
+    showError('无法连接到后端API<br>请确保后端服务器正在运行（端口8080）。');
+    return;
+  }
+  
+  // 显示加载状态
+  predictBtn.disabled = true;
+  predictBtn.innerHTML = '<span class="loading"></span>处理中...';
+  
+  if(currentMode==='single'){
+    try {
+      // 收集输入数据
+      const inputData = {};
+      let validationErrors = [];
+      
+      if (currentElement === 'major') {
+        // 主量元素特征
+        const majorFeatures = [
+          'SiO2', 'TiO2', 'Al2O3', 'FeO', 'MnO', 'MgO', 'CaO', 
+          'Na2O', 'K2O', 'F', 'Cl', 'Mg#', 'A/CNK'
+        ];
+        
+        for (const feature of majorFeatures) {
+          const input = document.getElementById(feature);
+          const value = parseFloat(input.value);
+          const validation = validateInputValue(feature, value);
+          
+          if (!validation.valid) {
+            validationErrors.push(validation.message);
+          } else {
+            inputData[feature] = value;
+          }
+        }
+        
+        if (validationErrors.length > 0) {
+          showError(validationErrors.join('<br>'));
+          predictBtn.disabled = false;
+          predictBtn.innerHTML = '开始判别';
+          return;
+        }
+        
+        // 调用主量元素API
+        const response = await fetch(`${API_BASE_URL}/predict/major`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(inputData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          const prediction = result.prediction;
+          
+          // 根据预测结果设置颜色
+          let predictionColor = '#2563eb';
+          if (prediction === 'Sn') predictionColor = '#16a34a';
+          else if (prediction === 'W') predictionColor = '#ca8a04';
+          else if (prediction === '斑岩Cu') predictionColor = '#dc2626';
+          
+          // 构建结果HTML - 只显示预测类别，不显示置信度（因为后端不再返回概率）
+          let resultHtml = '<b>单条样品判别结果：</b><br>' +
+                          '使用的模型：<b>主量元素模型</b><br>' +
+                          '判别的矿床类型：<span style="color:' + predictionColor + ';font-weight:600;font-size:1.1em;">' + prediction + '</span><br>' +
+                          '预测状态：<span style="color:#16a34a;font-weight:600;font-size:1.1em;">成功</span>';
+          
+          out.innerHTML = resultHtml;
+        } else {
+          showError((result.error || '预测失败') + '<br>' + (result.message || ''));
+        }
+        
+      } else {
+        // 微量元素特征
+        const traceFeatures = [
+          'Li', 'Sc', 'V', 'Cr', 'Co', 'Ni', 'Rb', 'Sr', 'Nb', 'Sn',
+          'Cs', 'Ba', 'Ta', 'W', 'Nb/Ta', 'V/Sc', 'Rb/Sr', 'Rb/Ba', 'Nb/Sn'
+        ];
+        
+        for (const feature of traceFeatures) {
+          const input = document.getElementById(feature);
+          const value = parseFloat(input.value);
+          const validation = validateInputValue(feature, value);
+          
+          if (!validation.valid) {
+            validationErrors.push(validation.message);
+          } else {
+            inputData[feature] = value;
+          }
+        }
+        
+        if (validationErrors.length > 0) {
+          showError(validationErrors.join('<br>'));
+          predictBtn.disabled = false;
+          predictBtn.innerHTML = '开始判别';
+          return;
+        }
+        
+        // 调用微量元素API
+        const response = await fetch(`${API_BASE_URL}/predict/trace`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(inputData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          const prediction = result.prediction;
+          
+          // 根据预测结果设置颜色
+          let predictionColor = '#2563eb';
+          if (prediction === 'Sn') predictionColor = '#16a34a';
+          else if (prediction === 'W') predictionColor = '#ca8a04';
+          else if (prediction === '斑岩Cu') predictionColor = '#dc2626';
+          
+          // 构建结果HTML - 只显示预测类别，不显示置信度（因为后端不再返回概率）
+          let resultHtml = '<b>单条样品判别结果：</b><br>' +
+                          '使用的模型：<b>微量元素模型</b><br>' +
+                          '判别的矿床类型：<span style="color:' + predictionColor + ';font-weight:600;font-size:1.1em;">' + prediction + '</span><br>' +
+                          '预测状态：<span style="color:#16a34a;font-weight:600;font-size:1.1em;">成功</span>';
+          
+          out.innerHTML = resultHtml;
+        } else {
+          showError((result.error || '预测失败') + '<br>' + (result.message || ''));
+        }
+      }
+      
+      // 显示结果
+      out.style.display = 'block';
+      
+    } catch (error) {
+      console.error('预测请求失败:', error);
+      showError('请求失败：' + error.message);
+    }
+    
+    // 恢复按钮状态（单条预测模式）
+    predictBtn.disabled = false;
+    predictBtn.innerHTML = '开始判别';
+    
+  } else {
+    // Excel批量模式
+    const fileInput = document.getElementById('excelFile');
+    if (!fileInput.files.length) {
+      showError('请先选择Excel文件');
+      predictBtn.disabled = false;
+      predictBtn.innerHTML = '开始判别';
+      return;
+    }
+    
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        
+        if (jsonData.length === 0) {
+          showError('Excel文件中没有数据');
+          predictBtn.disabled = false;
+          predictBtn.innerHTML = '开始判别';
+          return;
+        }
+        
+        // 调用批量预测API
+        const response = await fetch(`${API_BASE_URL}/predict/batch`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data: jsonData })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          const predictions = result.predictions;
+          const summary = result.summary;
+          
+          let resultHtml = '<b>批量预测结果：</b><br>' +
+                          '总样本数：' + predictions.length + '<br>' +
+                          '成功预测：' + result.successful_predictions + ' 个<br>' +
+                          '失败预测：' + result.failed_predictions + ' 个<br><br>';
+          
+          // 显示汇总统计
+          if (summary && Object.keys(summary).length > 0) {
+            resultHtml += '<b>分类统计：</b><br>';
+            for (const [className, count] of Object.entries(summary)) {
+              const percentage = ((count / result.successful_predictions) * 100).toFixed(1);
+              resultHtml += className + ': ' + count + ' 个 (' + percentage + '%)<br>';
+            }
+            resultHtml += '<br>';
+          }
+          
+          // 显示前几条详细结果
+          const maxDisplay = 10;
+          const displayCount = Math.min(maxDisplay, predictions.length);
+          resultHtml += '<b>前' + displayCount + '条详细结果：</b><br>';
+          
+          for (let i = 0; i < displayCount; i++) {
+            const pred = predictions[i];
+            if (pred.error) {
+              resultHtml += '样本 ' + pred.sample_index + ': <span style="color:#dc2626;">错误 - ' + pred.error + '</span><br>';
+            } else if (pred.major_prediction) {
+              const majorPred = pred.major_prediction;
+              resultHtml += '样本 ' + pred.sample_index + ': ' + majorPred.prediction + ' (主量元素模型) ';
+              
+              // 不再显示置信度，因为后端不再返回概率信息
+              resultHtml += '[预测成功] ';
+              
+              
+              resultHtml += '<br>';
+            } else if (pred.trace_prediction) {
+              const tracePred = pred.trace_prediction;
+              resultHtml += '样本 ' + pred.sample_index + ': ' + tracePred.prediction + ' (微量元素模型) ';
+              
+              // 不再显示置信度，因为后端不再返回概率信息
+              resultHtml += '[预测成功] ';
+              
+              
+              resultHtml += '<br>';
+            } else {
+              resultHtml += '样本 ' + pred.sample_index + ': <span style="color:#ca8a04;">无预测结果</span><br>';
+            }
+          }
+          
+          if (predictions.length > maxDisplay) {
+            resultHtml += '<br>... 还有 ' + (predictions.length - maxDisplay) + ' 条结果未显示';
+          }
+          
+          out.innerHTML = resultHtml;
+        } else {
+          showError('批量预测失败：' + (result.error || '未知错误'));
+        }
+        
+      } catch (error) {
+        console.error('批量处理失败:', error);
+        showError('批量处理失败：' + error.message);
+      } finally {
+        out.style.display = 'block';
+        predictBtn.disabled = false;
+        predictBtn.innerHTML = '开始判别';
+      }
+    };
+    
+    reader.onerror = function() {
+      showError('文件读取失败');
+      predictBtn.disabled = false;
+      predictBtn.innerHTML = '开始判别';
+    };
+    
+    reader.readAsArrayBuffer(file);
+    return; // 提前返回，等待文件读取完成
+  }
+}
+</script>
+</body>
+</html>
